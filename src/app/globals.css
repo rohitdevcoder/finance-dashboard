@@ -1,6 +1,40 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* 1. Added the missing colon to make it :root */
 :root {
+  --background: #FFFAF9;
+  --foreground: #171717;
+  --primary: #2A155F;
+  --secondary: #FD8346;
+}
+
+.dark {
+  --background: #0f0a1f; /* A very dark version of your primary purple */
+  --foreground: #f8fafc;
+  /* --primary: #4c2fb3;    A slightly lighter purple for dark mode visibility */
+  --secondary: #FD8346;  /* Orange stays vibrant */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  /* 2. Map the Next.js font variable to Tailwind's default sans font */
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  /* 3. Directly use the variable Next.js injected into our HTML tag */
+  font-family: var(--font-outfit), sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* :root {
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -23,4 +57,4 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-}
+} */
