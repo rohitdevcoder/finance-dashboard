@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📈 Finance Dashboard
 
-## Getting Started
+A modern, responsive, and interactive financial dashboard built as a Single Page Application (SPA) to demonstrate advanced frontend development skills, component architecture, and client-side state management.
 
-First, run the development server:
+🚀 **[View Live Demo](https://finance-dashboard-tet8k0dg.vercel.app/)** | 💻 **[GitHub Repository](https://github.com/rohitdevcoder/finance-dashboard)**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ✨ Key Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This project fulfills all core requirements and optional enhancements of the frontend evaluation prompt:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 📊 Core Dashboard & Visualizations
+- **Dynamic Summary Metrics:** Real-time calculation of Total Balance, Income, and Expenses.
+- **Interactive Charts (Recharts):** - *Cash Flow Bar Chart:* Daily comparison of income vs. expenses.
+  - *Balance Trend:* Line chart tracking overall net worth over time.
+  - *Spending Breakdown:* Donut chart categorizing outgoings.
+- **Automated Insights:** An intelligence panel that auto-calculates top spending categories and largest single expenses.
 
-## Learn More
+### 💸 Transaction Management
+- **Smart Data Table:** Search, sort, and filter transactions by type (Income/Expense) and keyword.
+- **CSV Export:** Native browser API integration allowing users to download their transaction history as a formatted `.csv` file.
 
-To learn more about Next.js, take a look at the following resources:
+### 🛡️ Role-Based Access Control (RBAC) & State
+- Simulated frontend roles toggleable via the navigation bar.
+  - **Viewer:** Read-only access to data and charts.
+  - **Admin:** Granted UI access to "Add Transaction" and "Edit Budgets" modal forms.
+- **Global State Management:** Powered by React Context API to ensure instant UI updates across all routed tabs without prop-drilling.
+- **Data Persistence:** Transactions, Budgets, and Goals are synced with browser `localStorage` to survive page refreshes.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 🗂️ Advanced Routing & Modules
+- A fully functional Sidebar implementing a tabbed SPA architecture:
+  - **Budget Planner:** Dynamic progress bars comparing actual spending against Admin-defined category limits.
+  - **Savings Goals:** Visual tracking of money allocated toward specific financial milestones.
+  - **Settings:** UI configurations including a persistent **Dark/Light Mode** toggle (via `next-themes`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🛠 Tech Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Framework:** Next.js 14 (App Router)
+- **Language:** TypeScript (Strict typing for all data models and component props)
+- **Styling:** Tailwind CSS (Responsive, mobile-first utility classes)
+- **Icons:** Lucide React
+- **Visualizations:** Recharts
+- **Theme Management:** `next-themes` (Hydration-safe dark mode)
+- **Typography:** Next/Font (Outfit)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🧠 Architecture & Technical Decisions
+
+1. **State Management (Context API):** I opted for React's Context API (`DashboardContext`) over Redux or Zustand. Given the scoped complexity of this assignment, Context provides the perfect balance of global state accessibility (managing roles, transactions, budgets, and mobile menu toggles) without introducing unnecessary boilerplate.
+2. **Derived State:** Metrics like "Total Balance" or "Category Percentages" are not stored in state. Instead, they are derived on-the-fly from the single source of truth (the transactions array) to prevent state-desync bugs.
+3. **Hydration Safety:** `localStorage` reads are wrapped in `useEffect` hooks with mount checks to prevent Next.js server/client hydration mismatch errors.
+4. **Component Modularity:** The UI is broken down into highly reusable components (`TransactionsTable`, `DashboardCharts`, `SummaryCards`) to keep the main layout clean and maintainable.
