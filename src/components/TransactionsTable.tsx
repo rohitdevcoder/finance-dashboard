@@ -4,20 +4,25 @@
 import { useState } from 'react';
 import { useDashboard } from '@/context/DashboardContext';
 import { formatCurrency } from '@/utils/formatters';
-import { Search, Plus, ArrowDownRight, ArrowUpRight, X, Download } from 'lucide-react';
+// Added Pencil and Trash2 icons
+import { Search, Plus, ArrowDownRight, ArrowUpRight, X, Download, Pencil, Trash2 } from 'lucide-react';
 import { Transaction, TransactionType } from '@/types';
 
 const CATEGORIES = ['Salary', 'Freelance', 'Housing', 'Utilities', 'Food', 'Transportation', 'Entertainment', 'Subscriptions', 'Savings', 'Other'];
 
 export default function TransactionsTable() {
-  const { transactions, role, addTransaction } = useDashboard();
+  // Added updateTransaction and deleteTransaction
+  const { transactions, role, addTransaction, updateTransaction, deleteTransaction } = useDashboard();
   
-  // Local State for filtering and modal
+  // Local State
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | TransactionType>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // NEW: Track which transaction we are editing (null means we are adding a new one)
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Form state for adding a new transaction
+  // Form state
   const [formData, setFormData] = useState({
     description: '', amount: '', date: new Date().toISOString().split('T')[0], category: 'Food', type: 'expense' as TransactionType
   });
@@ -30,43 +35,65 @@ export default function TransactionsTable() {
     return matchesSearch && matchesType;
   });
 
-  // Handle Form Submission
+  // NEW: Open Modal for Adding
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setFormData({ description: '', amount: '', date: new Date().toISOString().split('T')[0], category: 'Food', type: 'expense' });
+    setIsModalOpen(true);
+  };
+
+  // NEW: Open Modal for Editing
+  const handleOpenEdit = (tx: Transaction) => {
+    setEditingId(tx.id);
+    setFormData({ description: tx.description, amount: tx.amount.toString(), date: tx.date, category: tx.category, type: tx.type });
+    setIsModalOpen(true);
+  };
+
+  // NEW: Handle Delete with confirmation
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this transaction? This cannot be undone.")) {
+      deleteTransaction(id);
+    }
+  };
+
+  // UPDATED: Handle Form Submission for both Add and Edit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.description || !formData.amount) return;
 
-    const newTx: Transaction = {
-      id: Date.now().toString(), // Simple unique ID generator
-      description: formData.description,
-      amount: parseFloat(formData.amount),
-      date: formData.date,
-      category: formData.category,
-      type: formData.type,
-    };
+    if (editingId) {
+      // Update existing transaction
+      updateTransaction(editingId, {
+        id: editingId,
+        description: formData.description,
+        amount: parseFloat(formData.amount),
+        date: formData.date,
+        category: formData.category,
+        type: formData.type,
+      });
+    } else {
+      // Create new transaction
+      addTransaction({
+        id: Date.now().toString(),
+        description: formData.description,
+        amount: parseFloat(formData.amount),
+        date: formData.date,
+        category: formData.category,
+        type: formData.type,
+      });
+    }
 
-    addTransaction(newTx);
     setIsModalOpen(false);
-    setFormData({ description: '', amount: '', date: new Date().toISOString().split('T')[0], category: 'Food', type: 'expense' }); // Reset form
   };
 
   // CSV Export Logic
   const handleExportCSV = () => {
-    // 1. Create CSV headers
     const headers = ['Date', 'Description', 'Category', 'Type', 'Amount'];
-    
-    // 2. Map transactions to CSV rows
-    const csvRows = transactions.map(t => 
-      `${t.date},"${t.description}",${t.category},${t.type},${t.amount}`
-    );
-    
-    // 3. Combine headers and rows
+    const csvRows = transactions.map(t => `${t.date},"${t.description}",${t.category},${t.type},${t.amount}`);
     const csvString = [headers.join(','), ...csvRows].join('\n');
-    
-    // 4. Create a Blob and trigger download
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
     link.setAttribute('href', url);
     link.setAttribute('download', 'finance_transactions.csv');
     link.style.visibility = 'hidden';
@@ -106,7 +133,6 @@ export default function TransactionsTable() {
             <option value="expense">Expenses Only</option>
           </select>
 
-          {/* Export Button (Visible to everyone) */}
           <button 
             onClick={handleExportCSV}
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl transition-colors shadow-sm"
@@ -115,10 +141,10 @@ export default function TransactionsTable() {
             Export CSV
           </button>
 
-          {/* Add Button - ONLY VISIBLE TO ADMIN */}
+          {/* Add Button */}
           {role === 'admin' && (
             <button 
-              onClick={() => setIsModalOpen(true)}
+              onClick={handleOpenAdd}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm shadow-indigo-600/20"
             >
               <Plus className="w-4 h-4" />
@@ -137,18 +163,20 @@ export default function TransactionsTable() {
               <th className="px-6 py-4 font-medium">Category</th>
               <th className="px-6 py-4 font-medium">Date</th>
               <th className="px-6 py-4 font-medium text-right">Amount</th>
+              {/* NEW: Actions Column Header for Admins */}
+              {role === 'admin' && <th className="px-6 py-4 font-medium text-right">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {filteredTransactions.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={role === 'admin' ? 5 : 4} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                   No transactions found matching your criteria.
                 </td>
               </tr>
             ) : (
               filteredTransactions.map((tx) => (
-                <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${tx.type === 'income' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'}`}>
@@ -164,6 +192,34 @@ export default function TransactionsTable() {
                   <td className={`px-6 py-4 text-sm font-medium text-right ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
                     {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
                   </td>
+                  
+                  {/* NEW: Action Buttons for Admin (Always Visible & Colored) */}
+                  {role === 'admin' && (
+                    <td className="px-6 py-4 text-right">
+                      {/* Removed: opacity-0 group-hover:opacity-100 */}
+                      <div className="flex items-center justify-end gap-2">
+                        
+                        {/* Edit Button - Always Indigo */}
+                        <button 
+                          onClick={() => handleOpenEdit(tx)} 
+                          className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        
+                        {/* Delete Button - Always Rose (Red) */}
+                        <button 
+                          onClick={() => handleDelete(tx.id)} 
+                          className="p-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
@@ -171,12 +227,15 @@ export default function TransactionsTable() {
         </table>
       </div>
 
-      {/* Add Transaction Modal */}
+      {/* Add/Edit Transaction Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add Transaction</h3>
+              {/* Dynamic Title */}
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                {editingId ? 'Edit Transaction' : 'Add Transaction'}
+              </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <X className="w-5 h-5" />
               </button>
@@ -213,7 +272,10 @@ export default function TransactionsTable() {
               </div>
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors shadow-sm">Save Transaction</button>
+                {/* Dynamic Save Button */}
+                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors shadow-sm">
+                  {editingId ? 'Save Changes' : 'Save Transaction'}
+                </button>
               </div>
             </form>
           </div>
